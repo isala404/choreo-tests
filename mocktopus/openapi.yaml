@@ -1,0 +1,196 @@
+---
+openapi: 3.0.0
+info:
+  title: Mocktopus API
+  description: A simple mock API with various endpoints for testing
+  version: 1.0.0
+paths:
+  "/":
+    get:
+      summary: Root
+      description: Hello from HOSTNAME endpoint
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/healthz":
+    get:
+      summary: Health Check
+      description: Health check endpoint
+      operationId: health_check_healthz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/echo":
+    get:
+      summary: Echo
+      description: Echo query parameters. Declares `any` and `should` for documentation
+        purposes.
+      operationId: echo_echo_get
+      parameters:
+      - name: any
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Arbitrary parameter named 'any'
+          title: Any
+        description: Arbitrary parameter named 'any'
+      - name: should
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Arbitrary parameter named 'should'
+          title: Should
+        description: Arbitrary parameter named 'should'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/proxy":
+    post:
+      summary: Proxy
+      description: Proxy requests to other URLs
+      operationId: proxy_proxy_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/ProxyRequest"
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/debug":
+    get:
+      summary: Debug
+      description: Debug endpoint with extensive system information
+      operationId: debug_debug_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/failure":
+    get:
+      summary: Failure
+      description: Return a 500 error
+      operationId: failure_failure_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/success":
+    get:
+      summary: Success
+      description: Return a 200 success
+      operationId: success_success_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/random":
+    get:
+      summary: Random Status
+      description: Return random status codes (200 or 500)
+      operationId: random_status_random_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            "$ref": "#/components/schemas/ValidationError"
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ProxyRequest:
+      properties:
+        method:
+          type: string
+          title: Method
+          description: HTTP method to use (GET, POST, PUT, DELETE, PATCH)
+          default: GET
+        url:
+          type: string
+          title: Url
+          description: Target URL to proxy to
+          default: https://httpbin.org/get
+        body:
+          anyOf:
+          - {}
+          - type: 'null'
+          title: Body
+          description: Optional JSON body for methods that support it
+          default: {}
+        repate:
+          type: integer
+          maximum: 50
+          minimum: 1
+          title: Repate
+          description: Number of times to repeat the request
+          default: 1
+      type: object
+      title: ProxyRequest
+      description: Model for proxy request body.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

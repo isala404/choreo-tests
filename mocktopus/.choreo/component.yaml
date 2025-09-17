@@ -1,0 +1,13 @@
+schemaVersion: 1.1
+
+endpoints:
+  - name: mocktopus
+    displayName: Mocktopus
+    service:
+      basePath: /
+      port: 8000
+    type: REST
+    networkVisibilities: 
+      - Public
+      - Organization
+    schemaFilePath: openapi.yaml
