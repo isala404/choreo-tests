@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import random
+import socket
 
 app = FastAPI(
     title="Internal API",
@@ -7,6 +8,11 @@ app = FastAPI(
     version="0.1.0",
 )
 
+@app.get("/")
+async def root():
+    """Hello from HOSTNAME endpoint"""
+    hostname = socket.gethostname()
+    return {"message": f"Hello from {hostname}"}
 
 @app.get("/success")
 async def success():
