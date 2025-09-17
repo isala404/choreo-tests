@@ -1,0 +1,12 @@
+schemaVersion: 1.1
+
+endpoints:
+  - name: internal-api
+    displayName: Internal API
+    service:
+      basePath: /
+      port: 8000
+    type: REST
+    networkVisibilities:
+      - Project
+    schemaFilePath: openapi.yaml

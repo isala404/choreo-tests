@@ -1,0 +1,37 @@
+---
+openapi: 3.0.0
+info:
+  title: Internal API
+  description: Project-scoped internal API endpoints for testing
+  version: 0.1.0
+paths:
+  "/success":
+    get:
+      summary: Success
+      operationId: success_success_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/failure":
+    get:
+      summary: Failure
+      operationId: failure_failure_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/random":
+    get:
+      summary: Random Status
+      operationId: random_status_random_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
