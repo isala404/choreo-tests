@@ -1,0 +1,297 @@
+openapi: 3.0.0
+info:
+  title: FFmpeg Media Converter API
+  description: |
+    A REST API service for converting media files (video, audio, images) between different formats using FFmpeg.
+
+    ## Usage Flow
+    1. Submit a media file for conversion via POST /convert
+    2. Receive a job ID in the response
+    3. Poll GET /status/{jobId} to check conversion status
+    4. Once status is "completed", download the file via GET /download/{jobId}
+
+    ## Supported Formats
+    - **Video**: mp4, avi, mkv, mov, webm, flv, wmv, mpeg, 3gp, ogv
+    - **Audio**: mp3, wav, aac, flac, ogg, wma, m4a, opus, aiff
+    - **Image**: png, jpg, jpeg, gif, bmp, webp, tiff
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: /
+    description: Default server
+
+paths:
+  /:
+    get:
+      summary: Root endpoint
+      description: Returns service information and hostname
+      operationId: root_get
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "FFmpeg Media Converter Service"
+                  hostname:
+                    type: string
+                    example: "ffmpeg-server-abc123"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /healthz:
+    get:
+      summary: Health check
+      description: Check if the service and ffmpeg are available
+      operationId: healthz_get
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /formats:
+    get:
+      summary: List supported formats
+      description: Returns lists of supported video, audio, and image formats
+      operationId: formats_get
+      responses:
+        '200':
+          description: List of supported formats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormatsResponse'
+
+  /convert:
+    post:
+      summary: Submit media file for conversion
+      description: |
+        Upload a media file with output format specification.
+        Input format is auto-detected from the file.
+        Returns a job ID that can be used to poll for status and download the result.
+      operationId: convert_post
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - output_format
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The media file to convert
+                output_format:
+                  type: string
+                  description: Output format (e.g., mp4, mp3, png)
+                  example: "mp4"
+                options:
+                  type: string
+                  description: Optional FFmpeg options (e.g., "-b:v 1M -c:a aac")
+                  example: "-b:v 1M"
+      responses:
+        '202':
+          description: Conversion job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConvertResponse'
+        '400':
+          description: Bad request - missing parameters or invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /status/{jobId}:
+    get:
+      summary: Get job status
+      description: |
+        Poll this endpoint to check the status of a conversion job.
+        Possible statuses: accepted, processing, completed, failed
+      operationId: status_get
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The job ID returned from /convert
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          description: Missing job ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /download/{jobId}:
+    get:
+      summary: Download converted file
+      description: |
+        Download the converted file once the job status is "completed".
+        If the job is still processing, returns 202 with status.
+        If the job failed, returns 422 with error details.
+      operationId: download_get
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The job ID returned from /convert
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Converted file binary
+          content:
+            video/*:
+              schema:
+                type: string
+                format: binary
+            audio/*:
+              schema:
+                type: string
+                format: binary
+            image/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: Job still processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '404':
+          description: Job or file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Conversion failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ConvertResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the conversion job
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [accepted, processing, completed, failed]
+          description: Current status of the job
+          example: "accepted"
+        message:
+          type: string
+          description: Human-readable message
+          example: "Conversion job created. Poll /status/550e8400-e29b-41d4-a716-446655440000 for progress."
+
+    StatusResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the conversion job
+        status:
+          type: string
+          enum: [accepted, processing, completed, failed]
+          description: Current status of the job
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the job was created
+        completed_at:
+          type: string
+          format: date-time
+          description: Timestamp when the job completed (if finished)
+        error:
+          type: string
+          description: Error message if status is failed
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "missing_parameters"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "output_format is required"
+
+    FormatsResponse:
+      type: object
+      properties:
+        video:
+          type: array
+          items:
+            type: string
+          example: ["mp4", "avi", "mkv", "mov", "webm", "flv", "wmv", "mpeg", "3gp", "ogv"]
+        audio:
+          type: array
+          items:
+            type: string
+          example: ["mp3", "wav", "aac", "flac", "ogg", "wma", "m4a", "opus", "aiff"]
+        image:
+          type: array
+          items:
+            type: string
+          example: ["png", "jpg", "jpeg", "gif", "bmp", "webp", "tiff"]
