@@ -1,0 +1,62 @@
+asyncapi: 2.6.0
+info:
+  title: WebSocket Relay
+  version: 1.0.0
+  description: |
+    Generic WebSocket relay for real-time applications.
+    Supports room-based message broadcasting for whiteboards, games, collaboration tools.
+
+servers:
+  production:
+    url: ws://localhost:8000
+    protocol: ws
+
+channels:
+  /ws:
+    description: WebSocket endpoint for room-based messaging
+    parameters:
+      room:
+        description: Room ID to join (default: "default")
+        schema:
+          type: string
+      id:
+        description: Client ID (default: remote address)
+        schema:
+          type: string
+    publish:
+      operationId: sendMessage
+      summary: Send message to room
+      message:
+        $ref: '#/components/messages/Message'
+    subscribe:
+      operationId: receiveMessage
+      summary: Receive messages from room
+      message:
+        $ref: '#/components/messages/Message'
+
+components:
+  messages:
+    Message:
+      payload:
+        type: object
+        required:
+          - type
+        properties:
+          type:
+            type: string
+            description: Message type (app-defined)
+            examples:
+              - draw
+              - move
+              - chat
+              - state
+          room:
+            type: string
+            description: Room ID (set by server)
+          from:
+            type: string
+            description: Sender client ID (set by server)
+          payload:
+            type: object
+            description: Application-specific data
+            additionalProperties: true

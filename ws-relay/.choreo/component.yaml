@@ -1,0 +1,13 @@
+schemaVersion: 1.2
+
+endpoints:
+  - name: ws-relay
+    displayName: WebSocket Relay
+    service:
+      basePath: /
+      port: 8000
+    type: WS
+    networkVisibilities:
+      - Public
+      - Organization
+    schemaFilePath: asyncapi.yaml
