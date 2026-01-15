@@ -1,0 +1,267 @@
+openapi: 3.0.0
+info:
+  title: Retirement Projection API
+  version: 1.0.0
+  description: |
+    Monte Carlo simulation API for retirement planning.
+
+    ## Why This Needs a Dedicated Backend
+
+    This API runs 10,000+ Monte Carlo simulations per request to project
+    retirement outcomes. Each simulation:
+    - Generates random market returns for 30-50+ years
+    - Calculates portfolio growth during accumulation phase
+    - Simulates withdrawals during retirement phase
+    - Tracks if the portfolio survives
+
+    **Total operations per request:** 10,000 simulations × 40 years = 400,000 calculations
+
+    Edge functions timeout at 150 seconds and can't handle this compute load.
+    This service completes 10,000 simulations in ~50-200ms.
+
+    ## Use Case
+
+    Any fintech or personal finance app needs retirement projections:
+    - "Will I have enough to retire at 65?"
+    - "What's my chance of running out of money?"
+    - "How much should I save monthly?"
+
+servers:
+  - url: /
+
+paths:
+  /:
+    get:
+      summary: Service info
+      operationId: root_get
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  description:
+                    type: string
+                  hostname:
+                    type: string
+
+  /healthz:
+    get:
+      summary: Health check
+      operationId: healthz_get
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /projection:
+    post:
+      summary: Create retirement projection
+      description: |
+        Submit retirement parameters to run Monte Carlo simulation.
+        Returns a job ID for polling results.
+      operationId: projection_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectionRequest'
+            example:
+              current_age: 30
+              retirement_age: 65
+              life_expectancy: 95
+              current_savings: 50000
+              annual_contribution: 20000
+              annual_expenses: 60000
+              expected_return: 0.07
+              return_volatility: 0.15
+              inflation_rate: 0.03
+              simulations: 10000
+      responses:
+        '202':
+          description: Projection job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid parameters
+
+  /projection/{jobId}:
+    get:
+      summary: Get projection results
+      description: Poll this endpoint to get simulation results
+      operationId: projection_get
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Completed projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectionResult'
+        '202':
+          description: Projection still running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectionResult'
+        '404':
+          description: Job not found
+
+    delete:
+      summary: Delete projection
+      operationId: projection_delete
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deleted
+
+components:
+  schemas:
+    ProjectionRequest:
+      type: object
+      required:
+        - current_age
+        - retirement_age
+        - current_savings
+        - annual_contribution
+        - annual_expenses
+      properties:
+        current_age:
+          type: integer
+          description: Current age
+          example: 30
+        retirement_age:
+          type: integer
+          description: Target retirement age
+          example: 65
+        life_expectancy:
+          type: integer
+          description: Expected lifespan (default retirement_age + 30)
+          example: 95
+        current_savings:
+          type: number
+          description: Current retirement savings ($)
+          example: 50000
+        annual_contribution:
+          type: number
+          description: Annual contribution during working years ($)
+          example: 20000
+        annual_expenses:
+          type: number
+          description: Annual expenses in retirement ($)
+          example: 60000
+        expected_return:
+          type: number
+          description: Expected annual return (default 0.07 = 7%)
+          example: 0.07
+        return_volatility:
+          type: number
+          description: Return standard deviation (default 0.15 = 15%)
+          example: 0.15
+        inflation_rate:
+          type: number
+          description: Annual inflation rate (default 0.03 = 3%)
+          example: 0.03
+        simulations:
+          type: integer
+          description: Number of Monte Carlo simulations (default 10000, max 50000)
+          example: 10000
+
+    ProjectionResult:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        success_rate:
+          type: number
+          description: Percentage of simulations where money lasted through retirement
+          example: 87.5
+        percentiles:
+          $ref: '#/components/schemas/Percentiles'
+        yearly_projections:
+          type: array
+          items:
+            $ref: '#/components/schemas/YearProjection'
+        simulations_run:
+          type: integer
+        compute_time_ms:
+          type: number
+          description: Server compute time in milliseconds
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    Percentiles:
+      type: object
+      description: Final portfolio value percentiles
+      properties:
+        p10:
+          type: number
+          description: 10th percentile (pessimistic scenario)
+        p25:
+          type: number
+        p50:
+          type: number
+          description: Median outcome
+        p75:
+          type: number
+        p90:
+          type: number
+          description: 90th percentile (optimistic scenario)
+
+    YearProjection:
+      type: object
+      properties:
+        age:
+          type: integer
+        year:
+          type: integer
+        p10:
+          type: number
+        p50:
+          type: number
+        p90:
+          type: number
+        phase:
+          type: string
+          enum: [accumulation, withdrawal]
