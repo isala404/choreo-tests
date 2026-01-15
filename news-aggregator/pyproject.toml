@@ -2,17 +2,18 @@
 name = "news-aggregator"
 version = "1.0.0"
 description = "News aggregation API with entity extraction"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.109.0",
-    "uvicorn>=0.27.0",
-    "aiosqlite>=0.19.0",
-    "feedparser>=6.0.10",
-    "spacy>=3.7.0",
-    "sentence-transformers>=2.2.0",
-    "numpy>=1.24.0",
-    "apscheduler>=3.10.4",
-    "slowapi>=0.1.9",
+    "fastapi==0.115.7",
+    "uvicorn==0.34.0",
+    "aiosqlite==0.20.0",
+    "feedparser==6.0.11",
+    "spacy==3.8.3",
+    "sentence-transformers==3.3.1",
+    "numpy==2.2.2",
+    "apscheduler==3.11.0",
+    "slowapi==0.1.9",
+    "httpx==0.28.1",
 ]
 
 [build-system]

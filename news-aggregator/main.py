@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 import json
 
 # Configuration
-DATABASE_PATH = os.getenv("DATABASE_PATH", "news.db")
+DATABASE_PATH = os.getenv("DATABASE_PATH", ":memory:")
 FETCH_INTERVAL = int(os.getenv("FETCH_INTERVAL", "5"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
