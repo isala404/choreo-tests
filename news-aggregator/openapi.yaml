@@ -1,0 +1,284 @@
+openapi: 3.0.0
+info:
+  title: News Aggregator API
+  version: 1.0.0
+  description: |
+    Aggregates news from RSS feeds, extracts entities using NLP,
+    and serves trending data through a REST API.
+
+    ## Features
+    - Fetches from 10 RSS news sources every 5 minutes
+    - Extracts ORG, PERSON, and GPE entities using spaCy NER
+    - **Automatic entity resolution** using sentence embeddings
+      - "Apple Inc", "Apple", "APPLE" → all resolve to same entity
+      - No hardcoded rules - learns from semantic similarity
+    - Tracks trending entities over 1h and 24h windows
+    - Identifies "breaking" entities with >200% mention increase
+
+    ## Why This Needs a Backend
+    - spaCy NER model (~50MB) can't load in edge functions
+    - Sentence transformer model (~80MB) for entity resolution
+    - Background scheduler for periodic RSS fetching
+    - SQLite database for persistent storage
+    - Embedding computation is compute-intensive
+
+servers:
+  - url: /
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health_get
+      responses:
+        '200':
+          description: Service status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  last_fetch:
+                    type: string
+                    format: date-time
+                  feeds_configured:
+                    type: integer
+
+  /trending:
+    get:
+      summary: Get trending entities
+      operationId: trending_get
+      parameters:
+        - name: window
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h]
+            default: 24h
+      responses:
+        '200':
+          description: Top 20 trending entities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingResponse'
+
+  /trending/{category}:
+    get:
+      summary: Get trending by category
+      operationId: trending_category_get
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [tech, business, world, science]
+        - name: window
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h]
+            default: 24h
+      responses:
+        '200':
+          description: Trending entities for category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryTrendingResponse'
+
+  /entity/{name}:
+    get:
+      summary: Get articles for entity
+      operationId: entity_get
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Articles mentioning entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityArticlesResponse'
+        '404':
+          description: Entity not found
+
+  /articles/breaking:
+    get:
+      summary: Get breaking news
+      operationId: breaking_get
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Articles from last 2 hours
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BreakingResponse'
+
+  /articles/{article_id}/related:
+    get:
+      summary: Get related articles
+      operationId: related_get
+      parameters:
+        - name: article_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Up to 5 related articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatedResponse'
+        '404':
+          description: Article not found
+
+components:
+  schemas:
+    TrendingEntity:
+      type: object
+      properties:
+        entity:
+          type: string
+          example: Apple
+        type:
+          type: string
+          enum: [ORG, PERSON, GPE]
+        count:
+          type: integer
+        change_percent:
+          type: number
+          description: Percentage change from previous window
+        is_breaking:
+          type: boolean
+          description: True if change > 200%
+
+    TrendingResponse:
+      type: object
+      properties:
+        window:
+          type: string
+        trending:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendingEntity'
+
+    CategoryTrendingResponse:
+      type: object
+      properties:
+        category:
+          type: string
+        window:
+          type: string
+        trending:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              count:
+                type: integer
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        url:
+          type: string
+        summary:
+          type: string
+        source_name:
+          type: string
+        category:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+
+    EntityArticlesResponse:
+      type: object
+      properties:
+        entity:
+          type: string
+        count:
+          type: integer
+        offset:
+          type: integer
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+
+    BreakingResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+
+    RelatedArticle:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        url:
+          type: string
+        source_name:
+          type: string
+        category:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+        shared_entities:
+          type: integer
+
+    RelatedResponse:
+      type: object
+      properties:
+        article_id:
+          type: integer
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedArticle'

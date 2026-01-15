@@ -1,8 +1,8 @@
 schemaVersion: 1.2
 
 endpoints:
-  - name: retirement-api
-    displayName: Retirement Projection API
+  - name: news-aggregator
+    displayName: News Aggregator API
     service:
       basePath: /
       port: 8000
