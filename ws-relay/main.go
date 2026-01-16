@@ -18,10 +18,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	room   *Room
-	conn   *websocket.Conn
-	send   chan []byte
-	id     string
+	room *Room
+	conn *websocket.Conn
+	send chan []byte
+	id   string
 }
 
 type Room struct {
@@ -226,7 +226,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8000"
+		port = "8080"
 	}
 
 	log.Printf("ws-relay starting on port %s", port)

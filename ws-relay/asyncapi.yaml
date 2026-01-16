@@ -8,7 +8,7 @@ info:
 
 servers:
   production:
-    url: ws://localhost:8000
+    url: ws://localhost:8080
     protocol: ws
 
 channels:
@@ -16,11 +16,11 @@ channels:
     description: WebSocket endpoint for room-based messaging
     parameters:
       room:
-        description: Room ID to join (default: "default")
+        description: "Room ID to join"
         schema:
           type: string
       id:
-        description: Client ID (default: remote address)
+        description: "Client ID"
         schema:
           type: string
     publish:

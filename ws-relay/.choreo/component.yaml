@@ -5,7 +5,7 @@ endpoints:
     displayName: WebSocket Relay
     service:
       basePath: /
-      port: 8000
+      port: 8080
     type: WS
     networkVisibilities:
       - Public
